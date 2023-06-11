@@ -1,33 +1,311 @@
-import { useState } from "react";
+
+import {
+  ChangeEvent,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import clsx from "clsx";
 // import reactLogo from './assets/react.svg'
 
-const letters = "12345678QWERTYUIASDFGHJKZXCVBNM;";
-const boardWidth = 8;
-const boardHeight = 4;
+import { flushSync } from "react-dom";
+// 1f5jqvtm
+const letters = [
+  "12345678",
+  "asdfghjk",
+  "qwertyui",
+  "zxcvbnm,",
+  '!"#¤%&/(',
+  "ASDFGHJK",
+  "QWERTYUI",
+  "ZXCVBNM;",
+].join("");
+const boardElements = letters.split("");
+const boardWidth = 16;
 
-function App() {
-  const [count, setCount] = useState(0);
+export default function App() {
+  const [bpm, setBpm] = useState(() => {
+    const bpm = new URL(window.location.toString()).searchParams.get("bpm");
+    return bpm ? Number(bpm) : 200;
+  });
+  const deferredBpm = useDeferredValue(bpm);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentCol, setCurrentCol] = useState(0);
+  const [board, setBoard] = useState<Record<number, boolean>>(() => {
+    const pattern = new URL(window.location.toString()).searchParams.get(
+      "pattern"
+    );
+    return pattern ? initBoardFromParams(pattern) : {};
+  });
 
-  const boardElements = letters.split("");
+  const sounds = useMemo(() => {
+    const sounds = [
+      {
+        name: "Kick",
+        audio: new Audio("/assets/kick.mp3"),
+        credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+      },
+      {
+        name: "Snare",
+        audio: new Audio("/assets/snare.mp3"),
+        credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+      },
+      {
+        name: "Hi Hat",
+        audio: new Audio("/assets/hi-hat.mp3"),
+        credit: "https://samplefocus.com/tag/hip-hop",
+      },
+      { name: "Clap", audio: new Audio("/assets/clap.mp3") },
+    ];
 
+    sounds.forEach((sound) => {
+      sound.audio.preload = "auto";
+    });
+    return sounds;
+  }, []);
+
+  const boardHeight = useMemo(() => sounds.length, [sounds]);
+
+  const [volumes, setVolumes] = useState(() => {
+    const volumes = new URL(window.location.toString()).searchParams.get(
+      "volumes"
+    );
+    if (volumes) {
+      return volumes.split(",").map((volume) => Number(volume));
+    }
+    return sounds.map(() => 0.5);
+  });
+  const [offsets, setOffsets] = useState(() => {
+    const offsets = new URL(window.location.toString()).searchParams.get(
+      "offsets"
+    );
+    if (offsets) {
+      return offsets.split(",").map((offset) => Number(offset));
+    }
+    return sounds.map(() => 0);
+  });
+
+  useEffect(() => {
+    function keyUpListener(e: KeyboardEvent) {
+      if (e.key === " ") {
+        flushSync(() => {
+          setCurrentCol(0);
+          setIsPlaying((prev) => !prev);
+        });
+        return;
+      }
+
+      const idx = letters.indexOf(e.key);
+      if (idx === -1) return;
+      const value = board[idx];
+      setBoard((prev) => ({
+        ...prev,
+        [idx]: !prev[idx],
+      }));
+      if (value) return;
+    }
+    window.addEventListener("keyup", keyUpListener);
+    return () => {
+      window.removeEventListener("keyup", keyUpListener);
+    };
+  });
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    let canceled = false;
+    const interval = setInterval(() => {
+      if (canceled) return;
+      let col = 0;
+      let offsets: number[] = [];
+      flushSync(() => {
+        setCurrentCol((prev) => {
+          col = prev;
+          return (prev + 1) % boardWidth;
+        });
+        setOffsets((prev) => {
+          offsets = prev;
+          return prev;
+        });
+      });
+
+      sounds.forEach((sound, idx) => {
+        sound.audio.pause();
+        sound.audio.currentTime = offsets[idx] ?? 0;
+      });
+      for (let i = col; i < boardWidth * boardHeight; i = i + boardWidth) {
+        const soundIndex = i;
+        // For each sound, check if it's on in the current column
+        const value = board[soundIndex];
+        if (value) {
+          sounds[Math.floor(i / boardWidth)].audio.play();
+        }
+      }
+    }, (60 / (bpm * 2)) * 1000);
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
+  }, [isPlaying, board, bpm]);
+
+  useEffect(() => {
+    const url = new URL(window.location.toString());
+    url.searchParams.set(
+      "pattern",
+      boardElements.map((key, idx) => (board[idx] ? key : "")).join("")
+    );
+    window.history.replaceState({}, "", url.toString());
+  }, [board]);
+
+  useEffect(() => {
+    sounds.forEach((sound, idx) => {
+      sound.audio.volume = volumes[idx];
+    });
+  }, [volumes]);
+
+  useEffect(() => {
+    const url = new URL(window.location.toString());
+    url.searchParams.set(
+      "offsets",
+      offsets.map((offset) => String(offset)).join(",")
+    );
+    window.history.replaceState({}, "", url.toString());
+  }, [offsets]);
+
+  useEffect(() => {
+    const url = new URL(window.location.toString());
+    url.searchParams.set(
+      "volumes",
+      volumes.map((volume) => String(volume)).join(",")
+    );
+    window.history.replaceState({}, "", url.toString());
+  }, [volumes]);
+
+  useEffect(() => {
+    const url = new URL(window.location.toString());
+    url.searchParams.set("bpm", String(deferredBpm));
+    window.history.replaceState({}, "", url.toString());
+  }, [deferredBpm]);
   return (
-    <div className="h-screen w-screen bg-gradient-to-l from-emerald-500 to bg-emerald-700">
-      <div>
-        <div
-          className="grid grid-cols-8 grid-rows-4 gap-2 p-2"
-          style={{
-            aspectRatio: `${boardWidth}/${boardHeight}`,
+    <div className=" h-screen w-screen bg-gradient-to-l from-emerald-500 to-emerald-700 ">
+      <div className="flex gap-2 p-2">
+        <button
+          className="rounded bg-emerald-900 p-2"
+          onClick={() => setIsPlaying((prev) => !prev)}
+        >
+          ⏯️
+        </button>
+        <input
+          className="p-2"
+          type="number"
+          value={bpm}
+          min={1}
+          max={300}
+          onChange={(e) => {
+            e.stopPropagation();
+            setBpm(Number(e.target.value));
+          }}
+        />
+        <button
+          className="rounded bg-emerald-900 p-2 text-white"
+          onClick={() => {
+            setBoard({});
           }}
         >
-          {boardElements.map((l) => (
-            <div className="grid place-items-center bg-emerald-500">{l}</div>
+          Reset
+        </button>
+      </div>
+      <div className="grid grid-cols-[auto,1fr]">
+        <div className="grid-ros-4 grid place-items-stretch gap-2 p-2">
+          {sounds.map((sound, idx) => (
+            <div key={idx} className="grid gap-2">
+              <div className="grid gap-2 grid-cols-[1fr,auto,auto,auto,auto] items-center">
+                <button
+                  onClick={() => {
+                    sound.audio.currentTime = 0;
+                    sound.audio.play();
+                  }}
+                  className="rounded bg-emerald-900 p-2"
+                  title={`Credit: ${sound.credit}`}
+                >
+                  🔊 {sound.name}
+                </button>
+                <div className="w-8" title="Volume">
+                  {volumes[idx]}
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volumes[idx]}
+                  onInput={(e: ChangeEvent<HTMLInputElement>) => {
+                    setVolumes((prev) => {
+                      const next = [...prev];
+                      next[idx] = Number(e.target.value);
+                      return next;
+                    });
+                  }}
+                />
+                <div className="w-8" title="Offset">
+                  {offsets[idx]}
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={sound.audio.duration ?? 1}
+                  step={0.01}
+                  value={offsets[idx]}
+                  onInput={(e: ChangeEvent<HTMLInputElement>) => {
+                    setOffsets((prev) => {
+                      const next = [...prev];
+                      next[idx] = Number(e.target.value);
+                      return next;
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div
+          className="grid gap-2 p-2"
+          style={{
+            aspectRatio: `${boardWidth}/${boardHeight}`,
+            gridTemplateColumns: `repeat(${boardWidth}, 1fr)`,
+            gridTemplateRows: `repeat(${boardHeight}, 1fr)`,
+          }}
+        >
+          {boardElements.map((key, idx) => (
+            <button
+              key={key}
+              className={clsx(
+                "grid place-items-center rounded border border-slate-800 bg-emerald-500 font-bold text-black/70 active:opacity-80 transition-colors",
+                {
+                  "bg-red-500":
+                    board[idx] ||
+                    (isPlaying && idx % boardWidth === currentCol),
+                }
+              )}
+              onClick={() => {
+                setBoard((prev) => ({
+                  ...prev,
+                  [idx]: !prev[idx],
+                }));
+              }}
+            >
+              {key}
+            </button>
           ))}
         </div>
       </div>
     </div>
   );
 }
-
-export default App;
-
+function initBoardFromParams(pattern: string): Record<number, boolean> {
+  const board: Record<number, boolean> = {};
+  letters.split("").forEach((letter, idx) => {
+    board[idx] = pattern.includes(letter);
+  });
+  return board;
+}
