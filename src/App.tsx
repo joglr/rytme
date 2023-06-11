@@ -9,6 +9,11 @@ import {
 import clsx from "clsx";
 // import reactLogo from './assets/react.svg'
 
+import kick from "./assets/kick.mp3";
+import snare from "./assets/snare.mp3";
+import clap from "./assets/clap.mp3";
+import hiHat from "./assets/hi-hat.mp3";
+
 import { flushSync } from "react-dom";
 // 1f5jqvtm
 const letters = [
@@ -43,20 +48,24 @@ export default function App() {
     const sounds = [
       {
         name: "Kick",
-        audio: new Audio("/assets/kick.mp3"),
+        audio: new Audio(kick),
         credit: "https://cymatics.fm/blogs/production/free-drum-kits",
       },
       {
         name: "Snare",
-        audio: new Audio("/assets/snare.mp3"),
+        audio: new Audio(snare),
         credit: "https://cymatics.fm/blogs/production/free-drum-kits",
       },
       {
         name: "Hi Hat",
-        audio: new Audio("/assets/hi-hat.mp3"),
+        audio: new Audio(hiHat),
         credit: "https://samplefocus.com/tag/hip-hop",
       },
-      { name: "Clap", audio: new Audio("/assets/clap.mp3") },
+      {
+        name: "Clap",
+        audio: new Audio(clap),
+        credit: "https://samplefocus.com/tag/hip-hop"
+      },
     ];
 
     sounds.forEach((sound) => {
