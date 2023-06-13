@@ -325,7 +325,7 @@ export default function App() {
                     <button
                       key={`${soundName}-${idx}}-${isEnabled}`}
                       className={clsx(
-                        "grid place-items-center rounded bg-gradient-radial from-white/50 to-white/30 shadow-md transition-colors hover:opacity-80 active:opacity-80",
+                        "grid place-items-center rounded bg-gradient-radial from-white/50 to-white/30 shadow-md transition-all hover:opacity-80 active:opacity-80",
                         isPlayingThis
                           ? "bg-slate-900"
                           : isHighlighted
