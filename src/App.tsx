@@ -6,7 +6,6 @@ import {
   useState,
 } from "react";
 import clsx from "clsx";
-// import reactLogo from './assets/react.svg'
 
 import kick from "./assets/kick.mp3";
 import snare from "./assets/snare.mp3";
@@ -15,7 +14,7 @@ import hiHat from "./assets/hi-hat.mp3";
 
 import { flushSync } from "react-dom";
 import { useLocalStorage } from "./hooks";
-// 1f5jqvtm
+
 const letters = [
   "12345678",
   "asdfghjk",
@@ -152,35 +151,12 @@ export default function App() {
     };
   }, [isPlaying, board, bpm]);
 
-  // useEffect(() => {
-  //   const url = new URL(window.location.toString());
-  //   url.searchParams.set(
-  //     "pattern",
-  //     boardElements.map((key, idx) => (board[idx] ? key : "")).join("")
-  //   );
-  //   window.history.replaceState({}, "", url.toString());
-  // }, [board]);
-
   useEffect(() => {
     sounds.forEach((sound, idx) => {
       sound.audio.volume = volumes[idx];
     });
   }, [volumes]);
 
-  // useEffect(() => {
-  //   const url = new URL(window.location.toString());
-  //   url.searchParams.set(
-  //     "volumes",
-  //     volumes.map((volume) => String(volume)).join(",")
-  //   );
-  //   window.history.replaceState({}, "", url.toString());
-  // }, [volumes]);
-
-  // useEffect(() => {
-  //   const url = new URL(window.location.toString());
-  //   url.searchParams.set("bpm", String(deferredBpm));
-  //   window.history.replaceState({}, "", url.toString());
-  // }, [deferredBpm]);
   return (
     <div className="h-screen w-screen bg-slate-600 text-white/80">
       <div className="flex gap-2 p-2">
