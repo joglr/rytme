@@ -1,4 +1,3 @@
-
 import {
   ChangeEvent,
   useDeferredValue,
@@ -15,6 +14,7 @@ import clap from "./assets/clap.mp3";
 import hiHat from "./assets/hi-hat.mp3";
 
 import { flushSync } from "react-dom";
+import { useLocalStorage } from "./hooks";
 // 1f5jqvtm
 const letters = [
   "12345678",
@@ -30,6 +30,12 @@ const boardElements = letters.split("");
 const boardWidth = 16;
 
 export default function App() {
+  const [savedBeats, setSavedBeats] = useLocalStorage<
+    {
+      name: string;
+      pattern: Record<number, boolean>;
+    }[]
+  >("beats", []);
   const [bpm, setBpm] = useState(() => {
     const bpm = new URL(window.location.toString()).searchParams.get("bpm");
     return bpm ? Number(bpm) : 200;
@@ -50,21 +56,25 @@ export default function App() {
         name: "Kick",
         audio: new Audio(kick),
         credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+        offset: 0,
       },
       {
         name: "Snare",
         audio: new Audio(snare),
         credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+        offset: 0,
       },
       {
         name: "Hi Hat",
         audio: new Audio(hiHat),
         credit: "https://samplefocus.com/tag/hip-hop",
+        offset: 0.08,
       },
       {
         name: "Clap",
         audio: new Audio(clap),
-        credit: "https://samplefocus.com/tag/hip-hop"
+        credit: "https://samplefocus.com/tag/hip-hop",
+        offset: 0,
       },
     ];
 
@@ -84,15 +94,6 @@ export default function App() {
       return volumes.split(",").map((volume) => Number(volume));
     }
     return sounds.map(() => 0.5);
-  });
-  const [offsets, setOffsets] = useState(() => {
-    const offsets = new URL(window.location.toString()).searchParams.get(
-      "offsets"
-    );
-    if (offsets) {
-      return offsets.split(",").map((offset) => Number(offset));
-    }
-    return sounds.map(() => 0);
   });
 
   useEffect(() => {
@@ -126,21 +127,16 @@ export default function App() {
     const interval = setInterval(() => {
       if (canceled) return;
       let col = 0;
-      let offsets: number[] = [];
       flushSync(() => {
         setCurrentCol((prev) => {
           col = prev;
           return (prev + 1) % boardWidth;
         });
-        setOffsets((prev) => {
-          offsets = prev;
-          return prev;
-        });
       });
 
       sounds.forEach((sound, idx) => {
         sound.audio.pause();
-        sound.audio.currentTime = offsets[idx] ?? 0;
+        sound.audio.currentTime = sound.offset;
       });
       for (let i = col; i < boardWidth * boardHeight; i = i + boardWidth) {
         const soundIndex = i;
@@ -171,15 +167,6 @@ export default function App() {
       sound.audio.volume = volumes[idx];
     });
   }, [volumes]);
-
-  useEffect(() => {
-    const url = new URL(window.location.toString());
-    url.searchParams.set(
-      "offsets",
-      offsets.map((offset) => String(offset)).join(",")
-    );
-    window.history.replaceState({}, "", url.toString());
-  }, [offsets]);
 
   useEffect(() => {
     const url = new URL(window.location.toString());
@@ -218,6 +205,20 @@ export default function App() {
         <button
           className="rounded bg-emerald-900 p-2 text-white"
           onClick={() => {
+            const name = prompt(
+              "Name of beat?",
+              `Untitled ${savedBeats.length + 1}`
+            );
+            if (!name) return;
+            setSavedBeats((prev) => [...prev, { name, pattern: board }]);
+            setBoard({});
+          }}
+        >
+          Save beat
+        </button>
+        <button
+          className="rounded bg-emerald-900 p-2 text-white"
+          onClick={() => {
             setBoard({});
           }}
         >
@@ -228,7 +229,7 @@ export default function App() {
         <div className="grid-ros-4 grid place-items-stretch gap-2 p-2">
           {sounds.map((sound, idx) => (
             <div key={idx} className="grid gap-2">
-              <div className="grid gap-2 grid-cols-[1fr,auto,auto,auto,auto] items-center">
+              <div className="grid grid-cols-[1fr,auto,auto,auto,auto] items-center gap-2">
                 <button
                   onClick={() => {
                     sound.audio.currentTime = 0;
@@ -256,23 +257,6 @@ export default function App() {
                     });
                   }}
                 />
-                <div className="w-8" title="Offset">
-                  {offsets[idx]}
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={sound.audio.duration ?? 1}
-                  step={0.01}
-                  value={offsets[idx]}
-                  onInput={(e: ChangeEvent<HTMLInputElement>) => {
-                    setOffsets((prev) => {
-                      const next = [...prev];
-                      next[idx] = Number(e.target.value);
-                      return next;
-                    });
-                  }}
-                />
               </div>
             </div>
           ))}
@@ -289,7 +273,7 @@ export default function App() {
             <button
               key={key}
               className={clsx(
-                "grid place-items-center rounded border border-slate-800 bg-emerald-500 font-bold text-black/70 active:opacity-80 transition-colors",
+                "grid place-items-center rounded border border-slate-800 bg-emerald-500 font-bold text-black/70 transition-colors active:opacity-80",
                 {
                   "bg-red-500":
                     board[idx] ||
@@ -306,6 +290,22 @@ export default function App() {
               {key}
             </button>
           ))}
+        </div>
+        <div>
+          <h2>Saved beats</h2>
+          <ul>
+            {savedBeats.map((beat, idx) => (
+              <li key={idx}>
+                <button
+                  onClick={() => {
+                    setBoard(beat.pattern);
+                  }}
+                >
+                  Load {beat.name}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
