@@ -193,7 +193,7 @@ export default function App() {
               ...prev,
               { name, pattern: board, bpm, volumes },
             ]);
-            setBoard({});
+            setBoard(initializeBoard(sounds));
           }}
         >
           Save beat
@@ -211,7 +211,7 @@ export default function App() {
         <div className="grid-ros-4 grid place-items-stretch gap-2 p-2">
           {sounds.map((sound, idx) => (
             <div key={idx} className="grid gap-2">
-              <div className="grid grid-cols-[1fr,1fr,auto,auto,auto,auto] items-center gap-2">
+              <div className="grid grid-cols-[auto,1fr,auto,auto,auto,auto] items-center gap-2">
                 <button
                   onClick={() => {
                     setMutes((prev) => {
@@ -226,20 +226,24 @@ export default function App() {
                   {mutes[idx] ? "🔇" : "🔊"}
                 </button>
                 <button
-                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={() => {
+                    sound.audio.pause();
+                    sound.audio.currentTime = sound.offset;
+                    sound.audio.play();
+                  }}
+                  className="rounded bg-slate-900 px-2 py-1 text-left"
                   title={`Click to preview. Credit: ${sound.credit}`}
                 >
                   <b>⏯️ {sound.name}</b>
                 </button>
-                <div className="w-8" title="Volume">
-                  {volumes[idx]}
-                </div>
                 <button
                   className="rounded bg-slate-900 px-2 py-1"
                   onClick={() =>
                     setBoard((prev) => ({
                       ...prev,
-                      [sound.name]: generatePattern(boardWidth, 1, 0),
+                      [sound.name]: prev[sound.name].every(Boolean)
+                        ? new Array(boardWidth).fill(false)
+                        : generatePattern(boardWidth, 1, 0),
                     }))
                   }
                 >
@@ -289,7 +293,10 @@ export default function App() {
                           ? "bg-slate-900"
                           : isHighlighted
                           ? sound.color
-                          : "bg-slate-700"
+                          : "bg-slate-700",
+                        {
+                          "opacity-50": mutes[sounds.indexOf(sound)],
+                        }
                       )}
                       onClick={() => {
                         const newRow = [...beats];
