@@ -156,6 +156,17 @@ export default function App() {
     });
   }, [sounds, volumes]);
 
+  const fillWithPattern = (soundName: string, step: number, skip: number) => {
+    const pattern = generatePattern(boardWidth, step, skip);
+
+    return setBoard((prev) => ({
+      ...prev,
+      [soundName]:
+        prev[soundName].join("") === pattern.join("")
+          ? new Array(boardWidth).fill(false)
+          : pattern,
+    }));
+  };
   return (
     <div className="h-screen w-screen bg-slate-600 text-white/80">
       <header className="flex gap-2 bg-slate-900 p-2">
@@ -211,7 +222,7 @@ export default function App() {
         <div className="grid-ros-4 grid place-items-stretch gap-2 p-2">
           {sounds.map((sound, idx) => (
             <div key={idx} className="grid gap-2">
-              <div className="grid grid-cols-[auto,1fr,auto,auto,auto,auto] items-center gap-2">
+              <div className="grid grid-cols-[auto,1fr,auto,auto,auto,auto,auto] items-center gap-2">
                 <button
                   onClick={() => {
                     setMutes((prev) => {
@@ -236,20 +247,6 @@ export default function App() {
                 >
                   <b>⏯️ {sound.name}</b>
                 </button>
-                <button
-                  className="rounded bg-slate-900 px-2 py-1"
-                  onClick={() =>
-                    setBoard((prev) => ({
-                      ...prev,
-                      [sound.name]: prev[sound.name].every(Boolean)
-                        ? new Array(boardWidth).fill(false)
-                        : generatePattern(boardWidth, 1, 0),
-                    }))
-                  }
-                >
-                  *
-                </button>
-
                 <input
                   type="range"
                   min={0}
@@ -264,6 +261,36 @@ export default function App() {
                     });
                   }}
                 />
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={() => fillWithPattern(sound.name, 1, 0)}
+                >
+                  *
+                </button>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={(evt) =>
+                    fillWithPattern(sound.name, 2, evt.shiftKey ? 1 : 0)
+                  }
+                >
+                  2
+                </button>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={(evt) =>
+                    fillWithPattern(sound.name, 4, evt.shiftKey ? 2 : 0)
+                  }
+                >
+                  4
+                </button>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={(evt) =>
+                    fillWithPattern(sound.name, 8, evt.shiftKey ? 4 : 0)
+                  }
+                >
+                  8
+                </button>
               </div>
             </div>
           ))}
@@ -363,7 +390,7 @@ export default function App() {
   );
 }
 
-function generatePattern(width: number, skip: 1 | 2 | 4 | 8, offset: number) {
+function generatePattern(width: number, skip: number, offset: number) {
   const pattern = new Array(width).fill(false);
   for (let i = 0; i < width; i++) {
     if (i % skip === offset) {
