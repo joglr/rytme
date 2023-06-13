@@ -33,25 +33,15 @@ export default function App() {
   const [savedBeats, setSavedBeats] = useLocalStorage<
     {
       name: string;
-      pattern: Record<number, boolean>;
+      pattern: Record<string, boolean[]>;
       bpm: number;
       volumes: number[];
     }[]
   >("beats", []);
-  const [bpm, setBpm] = useState(() => {
-    const bpm = new URL(window.location.toString()).searchParams.get("bpm");
-    return bpm ? Number(bpm) : 200;
-  });
-  const deferredBpm = useDeferredValue(bpm);
+  const [bpm, setBpm] = useState(() => 200);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentCol, setCurrentCol] = useState(0);
-  const [board, setBoard] = useState<Record<number, boolean>>(() => {
-    const pattern = new URL(window.location.toString()).searchParams.get(
-      "pattern"
-    );
-    return pattern ? initBoardFromParams(pattern) : {};
-  });
-
   const sounds = useMemo(() => {
     const sounds = [
       {
@@ -85,6 +75,13 @@ export default function App() {
     });
     return sounds;
   }, []);
+
+  const [board, setBoard] = useState<Record<string, boolean[]>>(() => {
+    return sounds.reduce((acc, sound) => {
+      acc[sound.name] = new Array(boardWidth).fill(false);
+      return acc;
+    }, {} as Record<string, boolean[]>);
+  });
 
   const boardHeight = useMemo(() => sounds.length, [sounds]);
 
@@ -155,14 +152,14 @@ export default function App() {
     };
   }, [isPlaying, board, bpm]);
 
-  useEffect(() => {
-    const url = new URL(window.location.toString());
-    url.searchParams.set(
-      "pattern",
-      boardElements.map((key, idx) => (board[idx] ? key : "")).join("")
-    );
-    window.history.replaceState({}, "", url.toString());
-  }, [board]);
+  // useEffect(() => {
+  //   const url = new URL(window.location.toString());
+  //   url.searchParams.set(
+  //     "pattern",
+  //     boardElements.map((key, idx) => (board[idx] ? key : "")).join("")
+  //   );
+  //   window.history.replaceState({}, "", url.toString());
+  // }, [board]);
 
   useEffect(() => {
     sounds.forEach((sound, idx) => {
@@ -170,20 +167,20 @@ export default function App() {
     });
   }, [volumes]);
 
-  useEffect(() => {
-    const url = new URL(window.location.toString());
-    url.searchParams.set(
-      "volumes",
-      volumes.map((volume) => String(volume)).join(",")
-    );
-    window.history.replaceState({}, "", url.toString());
-  }, [volumes]);
+  // useEffect(() => {
+  //   const url = new URL(window.location.toString());
+  //   url.searchParams.set(
+  //     "volumes",
+  //     volumes.map((volume) => String(volume)).join(",")
+  //   );
+  //   window.history.replaceState({}, "", url.toString());
+  // }, [volumes]);
 
-  useEffect(() => {
-    const url = new URL(window.location.toString());
-    url.searchParams.set("bpm", String(deferredBpm));
-    window.history.replaceState({}, "", url.toString());
-  }, [deferredBpm]);
+  // useEffect(() => {
+  //   const url = new URL(window.location.toString());
+  //   url.searchParams.set("bpm", String(deferredBpm));
+  //   window.history.replaceState({}, "", url.toString());
+  // }, [deferredBpm]);
   return (
     <div className="h-screen w-screen bg-slate-600 text-white/80">
       <div className="flex gap-2 p-2">
@@ -350,11 +347,4 @@ export default function App() {
       </div>
     </div>
   );
-}
-function initBoardFromParams(pattern: string): Record<number, boolean> {
-  const board: Record<number, boolean> = {};
-  letters.split("").forEach((letter, idx) => {
-    board[idx] = pattern.includes(letter);
-  });
-  return board;
 }
