@@ -1,10 +1,4 @@
-import {
-  ChangeEvent,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 
 import kick from "./assets/kick.mp3";
@@ -15,18 +9,15 @@ import hiHat from "./assets/hi-hat.mp3";
 import { flushSync } from "react-dom";
 import { useLocalStorage } from "./hooks";
 
-const letters = [
-  "12345678",
-  "asdfghjk",
-  "qwertyui",
-  "zxcvbnm,",
-  '!"#¤%&/(',
-  "ASDFGHJK",
-  "QWERTYUI",
-  "ZXCVBNM;",
-].join("");
-const boardElements = letters.split("");
 const boardWidth = 16;
+
+type Sound = {
+  name: string;
+  audio: HTMLAudioElement;
+  credit: string;
+  offset: number;
+  color: string;
+};
 
 export default function App() {
   const [savedBeats, setSavedBeats] = useLocalStorage<
@@ -41,31 +32,35 @@ export default function App() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentCol, setCurrentCol] = useState(0);
-  const sounds = useMemo(() => {
-    const sounds = [
+  const sounds = useMemo<Sound[]>(() => {
+    const sounds: Sound[] = [
       {
         name: "Kick",
         audio: new Audio(kick),
         credit: "https://cymatics.fm/blogs/production/free-drum-kits",
         offset: 0,
-      },
-      {
-        name: "Snare",
-        audio: new Audio(snare),
-        credit: "https://cymatics.fm/blogs/production/free-drum-kits",
-        offset: 0,
+        color: "bg-red-500",
       },
       {
         name: "Hi Hat",
         audio: new Audio(hiHat),
         credit: "https://samplefocus.com/tag/hip-hop",
         offset: 0.08,
+        color: "bg-green-500",
+      },
+      {
+        name: "Snare",
+        audio: new Audio(snare),
+        credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+        offset: 0,
+        color: "bg-blue-500",
       },
       {
         name: "Clap",
         audio: new Audio(clap),
         credit: "https://samplefocus.com/tag/hip-hop",
         offset: 0,
+        color: "bg-yellow-500",
       },
     ];
 
@@ -75,14 +70,19 @@ export default function App() {
     return sounds;
   }, []);
 
-  const [board, setBoard] = useState<Record<string, boolean[]>>(() => {
-    return sounds.reduce((acc, sound) => {
-      acc[sound.name] = new Array(boardWidth).fill(false);
-      return acc;
-    }, {} as Record<string, boolean[]>);
-  });
+  const [board, setBoard] = useState<Record<string, boolean[]>>(() =>
+    initializeBoard(sounds)
+  );
 
   const boardHeight = useMemo(() => sounds.length, [sounds]);
+
+  const [mutes, setMutes] = useState(() => {
+    const mutes: boolean[] = [];
+    for (let i = 0; i < boardHeight; i++) {
+      mutes.push(false);
+    }
+    return mutes;
+  });
 
   const [volumes, setVolumes] = useState(() => {
     const volumes = new URL(window.location.toString()).searchParams.get(
@@ -103,15 +103,6 @@ export default function App() {
         });
         return;
       }
-
-      const idx = letters.indexOf(e.key);
-      if (idx === -1) return;
-      const value = board[idx];
-      setBoard((prev) => ({
-        ...prev,
-        [idx]: !prev[idx],
-      }));
-      if (value) return;
     }
     window.addEventListener("keyup", keyUpListener);
     return () => {
@@ -125,43 +116,54 @@ export default function App() {
     const interval = setInterval(() => {
       if (canceled) return;
       let col = 0;
+      let mutedSounds: boolean[] = [];
       flushSync(() => {
         setCurrentCol((prev) => {
           col = prev;
           return (prev + 1) % boardWidth;
         });
+        setMutes(() => {
+          mutedSounds = [...mutes];
+          return mutedSounds;
+        });
       });
 
-      sounds.forEach((sound, idx) => {
+      Object.entries(board).forEach(([soundName]) => {
+        const sound = sounds.find((x) => x.name === soundName);
+        if (!sound) return;
         sound.audio.pause();
         sound.audio.currentTime = sound.offset;
       });
-      for (let i = col; i < boardWidth * boardHeight; i = i + boardWidth) {
-        const soundIndex = i;
-        // For each sound, check if it's on in the current column
-        const value = board[soundIndex];
-        if (value) {
-          sounds[Math.floor(i / boardWidth)].audio.play();
+
+      Object.entries(board).forEach(([soundName, beats], idx, test) => {
+        const sound = sounds.find((x) => x.name === soundName);
+        if (!sound) return;
+        const value = beats[col];
+        if (value && !mutedSounds[idx]) {
+          sound.audio.play();
         }
-      }
+      });
     }, (60 / (bpm * 2)) * 1000);
     return () => {
       canceled = true;
       clearInterval(interval);
     };
-  }, [isPlaying, board, bpm]);
+  }, [board, bpm, isPlaying, mutes, sounds]);
 
   useEffect(() => {
     sounds.forEach((sound, idx) => {
       sound.audio.volume = volumes[idx];
     });
-  }, [volumes]);
+  }, [sounds, volumes]);
 
   return (
     <div className="h-screen w-screen bg-slate-600 text-white/80">
-      <div className="flex gap-2 p-2">
+      <header className="flex gap-2 bg-slate-900 p-2">
         <button
-          className="rounded bg-green-500 px-2 py-1"
+          className={clsx("rounded px-2 py-1", {
+            "bg-green-700": isPlaying,
+            "bg-red-700": !isPlaying,
+          })}
           onClick={() => setIsPlaying((prev) => !prev)}
         >
           ⏯️
@@ -199,12 +201,12 @@ export default function App() {
         <button
           className="rounded bg-slate-900 px-2 py-1"
           onClick={() => {
-            setBoard({});
+            setBoard(initializeBoard(sounds));
           }}
         >
           Reset
         </button>
-      </div>
+      </header>
       <div className="grid grid-cols-[auto,1fr]">
         <div className="grid-ros-4 grid place-items-stretch gap-2 p-2">
           {sounds.map((sound, idx) => (
@@ -212,18 +214,38 @@ export default function App() {
               <div className="grid grid-cols-[1fr,1fr,auto,auto,auto,auto] items-center gap-2">
                 <button
                   onClick={() => {
-                    sound.audio.currentTime = 0;
-                    sound.audio.play();
+                    setMutes((prev) => {
+                      const newMutes = [...prev];
+                      newMutes[idx] = !newMutes[idx];
+                      return newMutes;
+                    });
                   }}
                   className="rounded bg-slate-900 px-2 py-1"
-                  title={`Credit: ${sound.credit}`}
+                  title="Mute / Unmute"
                 >
-                  🔊
+                  {mutes[idx] ? "🔇" : "🔊"}
                 </button>
-                <b>{sound.name}</b>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  title={`Click to preview. Credit: ${sound.credit}`}
+                >
+                  <b>⏯️ {sound.name}</b>
+                </button>
                 <div className="w-8" title="Volume">
                   {volumes[idx]}
                 </div>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={() =>
+                    setBoard((prev) => ({
+                      ...prev,
+                      [sound.name]: generatePattern(boardWidth, 1, 0),
+                    }))
+                  }
+                >
+                  *
+                </button>
+
                 <input
                   type="range"
                   min={0}
@@ -250,28 +272,37 @@ export default function App() {
             gridTemplateRows: `repeat(${boardHeight}, 1fr)`,
           }}
         >
-          {boardElements.map((key, idx) => {
-            const isHighlighted =
-              board[idx] || (isPlaying && idx % boardWidth === currentCol);
+          {Object.entries(board).map(([soundName, beats]) => {
+            const sound = sounds.find((x) => x.name === soundName);
+            if (!sound) return null;
             return (
-              <button
-                key={key}
-                className={clsx(
-                  "grid place-items-center rounded text-xl  font-extrabold text-black/70 shadow-md transition-colors active:opacity-80",
-                  {
-                    "bg-slate-700 text-white": isHighlighted,
-                    "bg-slate-500": !isHighlighted,
-                  }
-                )}
-                onClick={() => {
-                  setBoard((prev) => ({
-                    ...prev,
-                    [idx]: !prev[idx],
-                  }));
-                }}
-              >
-                {key}
-              </button>
+              <>
+                {beats.map((isEnabled, idx) => {
+                  const isPlayingThis = isPlaying && idx === currentCol;
+                  const isHighlighted = isEnabled;
+                  return (
+                    <button
+                      key={`${soundName}-${idx}}-${isEnabled}`}
+                      className={clsx(
+                        "grid place-items-center rounded bg-gradient-radial from-white/50 to-white/30 text-xl font-extrabold shadow-md transition-colors active:opacity-80",
+                        isPlayingThis
+                          ? "bg-slate-900"
+                          : isHighlighted
+                          ? sound.color
+                          : "bg-slate-700"
+                      )}
+                      onClick={() => {
+                        const newRow = [...beats];
+                        newRow[idx] = !newRow[idx];
+                        setBoard((prev) => ({
+                          ...prev,
+                          [soundName]: newRow,
+                        }));
+                      }}
+                    />
+                  );
+                })}
+              </>
             );
           })}
         </div>
@@ -323,4 +354,21 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+function generatePattern(width: number, skip: 1 | 2 | 4 | 8, offset: number) {
+  const pattern = new Array(width).fill(false);
+  for (let i = 0; i < width; i++) {
+    if (i % skip === offset) {
+      pattern[i] = true;
+    }
+  }
+  return pattern;
+}
+
+function initializeBoard(sounds: Sound[]) {
+  return sounds.reduce((acc, sound) => {
+    acc[sound.name] = new Array(boardWidth).fill(false);
+    return acc;
+  }, {} as Record<string, boolean[]>);
 }
