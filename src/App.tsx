@@ -135,7 +135,7 @@ export default function App() {
         sound.audio.currentTime = sound.offset;
       });
 
-      Object.entries(board).forEach(([soundName, beats], idx, test) => {
+      Object.entries(board).forEach(([soundName, beats], idx) => {
         const sound = sounds.find((x) => x.name === soundName);
         if (!sound) return;
         const value = beats[col];
