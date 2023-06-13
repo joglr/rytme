@@ -330,6 +330,18 @@ export default function App() {
                 >
                   Write
                 </button>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={() => {
+                    setSavedBeats((prev) => {
+                      const next = [...prev];
+                      next.splice(idx, 1);
+                      return next;
+                    });
+                  }}
+                >
+                  Delete
+                </button>
                 {beat.name}
               </li>
             ))}
