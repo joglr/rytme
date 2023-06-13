@@ -197,8 +197,10 @@ export default function App() {
           value={bpm}
           min={1}
           max={300}
-          onChange={(e) => {
+          onKeyUp={(e) => {
             e.stopPropagation();
+          }}
+          onChange={(e) => {
             setBpm(Number(e.target.value));
           }}
         />
