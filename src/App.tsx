@@ -37,28 +37,28 @@ export default function App() {
       {
         name: "Kick",
         audio: new Audio(kick),
-        credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+        credit: "cymatics.fm",
         offset: 0,
         color: "bg-red-500",
       },
       {
         name: "Hi Hat",
         audio: new Audio(hiHat),
-        credit: "https://samplefocus.com/tag/hip-hop",
+        credit: "samplefocus.com",
         offset: 0.08,
         color: "bg-green-500",
       },
       {
         name: "Snare",
         audio: new Audio(snare),
-        credit: "https://cymatics.fm/blogs/production/free-drum-kits",
+        credit: "cymatics.fm",
         offset: 0,
         color: "bg-blue-500",
       },
       {
         name: "Clap",
         audio: new Audio(clap),
-        credit: "https://samplefocus.com/tag/hip-hop",
+        credit: "samplefocus.com",
         offset: 0,
         color: "bg-yellow-500",
       },
@@ -193,7 +193,7 @@ export default function App() {
           }}
         />
         <button
-          className="rounded bg-slate-900 px-2 py-1"
+          className="rounded border border-white/50 px-2 py-1"
           onClick={() => {
             const name = prompt(
               "Name of beat?",
@@ -207,12 +207,15 @@ export default function App() {
             setBoard(initializeBoard(sounds));
           }}
         >
-          Save beat
+          Save as new beat
         </button>
         <button
           className="rounded bg-slate-900 px-2 py-1"
           onClick={() => {
             setBoard(initializeBoard(sounds));
+            setVolumes(sounds.map(() => 0.5));
+            setIsPlaying(false);
+            setCurrentCol(0);
           }}
         >
           Reset
@@ -253,6 +256,13 @@ export default function App() {
                   max={1}
                   step={0.01}
                   value={volumes[idx]}
+                  onDoubleClick={() => {
+                    setVolumes((prev) => {
+                      const next = [...prev];
+                      next[idx] = 0.5;
+                      return next;
+                    });
+                  }}
                   onInput={(e: ChangeEvent<HTMLInputElement>) => {
                     setVolumes((prev) => {
                       const next = [...prev];
@@ -315,7 +325,7 @@ export default function App() {
                     <button
                       key={`${soundName}-${idx}}-${isEnabled}`}
                       className={clsx(
-                        "grid place-items-center rounded bg-gradient-radial from-white/50 to-white/30 text-xl font-extrabold shadow-md transition-colors active:opacity-80",
+                        "grid place-items-center rounded bg-gradient-radial from-white/50 to-white/30 shadow-md transition-colors hover:opacity-80 active:opacity-80",
                         isPlayingThis
                           ? "bg-slate-900"
                           : isHighlighted
@@ -353,34 +363,65 @@ export default function App() {
                     setBoard(beat.pattern);
                   }}
                 >
-                  Read
+                  Load
                 </button>
                 <button
                   className="rounded bg-slate-900 px-2 py-1"
                   onClick={() => {
-                    setSavedBeats((prev) => {
-                      // Overwrite idx with current board
-                      const next = [...prev];
-                      next[idx] = { ...beat, pattern: board, bpm, volumes };
-                      return next;
-                    });
+                    if (
+                      confirm(
+                        `Are you sure you want to overwrite ${beat.name}?`
+                      )
+                    ) {
+                      setSavedBeats((prev) => {
+                        const next = [...prev];
+                        next[idx] = {
+                          name: beat.name,
+                          pattern: board,
+                          bpm,
+                          volumes,
+                        };
+                        return next;
+                      });
+                    }
                   }}
                 >
-                  Write
+                  Save
                 </button>
                 <button
-                  className="rounded bg-slate-900 px-2 py-1"
+                  className="rounded bg-red-900 px-2 py-1"
                   onClick={() => {
-                    setSavedBeats((prev) => {
-                      const next = [...prev];
-                      next.splice(idx, 1);
-                      return next;
-                    });
+                    if (
+                      confirm(`Are you sure you want to delete ${beat.name}?`)
+                    ) {
+                      setSavedBeats((prev) => {
+                        const next = [...prev];
+                        next.splice(idx, 1);
+                        return next;
+                      });
+                    }
                   }}
                 >
                   Delete
                 </button>
-                {beat.name}
+                <button
+                  onClick={() => {
+                    const newName = prompt("New name", beat.name);
+                    if (newName) {
+                      setSavedBeats((prev) => {
+                        const next = [...prev];
+                        next[idx] = {
+                          ...beat,
+                          name: newName,
+                        };
+                        return next;
+                      });
+                    }
+                  }}
+                  title="Click to rename"
+                >
+                  {beat.name}
+                </button>
               </li>
             ))}
           </ul>
