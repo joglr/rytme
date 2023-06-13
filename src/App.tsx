@@ -34,6 +34,8 @@ export default function App() {
     {
       name: string;
       pattern: Record<number, boolean>;
+      bpm: number;
+      volumes: number[];
     }[]
   >("beats", []);
   const [bpm, setBpm] = useState(() => {
@@ -186,13 +188,13 @@ export default function App() {
     <div className="h-screen w-screen bg-slate-600 text-white/80">
       <div className="flex gap-2 p-2">
         <button
-          className="rounded bg-slate-900 p-2"
+          className="rounded bg-green-500 px-2 py-1"
           onClick={() => setIsPlaying((prev) => !prev)}
         >
           ⏯️
         </button>
         <input
-          className="rounded bg-slate-900 p-2"
+          className="rounded bg-slate-900 px-2 py-1"
           type="number"
           value={bpm}
           min={1}
@@ -205,21 +207,24 @@ export default function App() {
           }}
         />
         <button
-          className="rounded bg-slate-900 p-2"
+          className="rounded bg-slate-900 px-2 py-1"
           onClick={() => {
             const name = prompt(
               "Name of beat?",
               `Untitled ${savedBeats.length + 1}`
             );
             if (!name) return;
-            setSavedBeats((prev) => [...prev, { name, pattern: board }]);
+            setSavedBeats((prev) => [
+              ...prev,
+              { name, pattern: board, bpm, volumes },
+            ]);
             setBoard({});
           }}
         >
           Save beat
         </button>
         <button
-          className="rounded bg-slate-900 p-2"
+          className="rounded bg-slate-900 px-2 py-1"
           onClick={() => {
             setBoard({});
           }}
@@ -231,17 +236,18 @@ export default function App() {
         <div className="grid-ros-4 grid place-items-stretch gap-2 p-2">
           {sounds.map((sound, idx) => (
             <div key={idx} className="grid gap-2">
-              <div className="grid grid-cols-[1fr,auto,auto,auto,auto] items-center gap-2">
+              <div className="grid grid-cols-[1fr,1fr,auto,auto,auto,auto] items-center gap-2">
                 <button
                   onClick={() => {
                     sound.audio.currentTime = 0;
                     sound.audio.play();
                   }}
-                  className="rounded bg-slate-900 p-2"
+                  className="rounded bg-slate-900 px-2 py-1"
                   title={`Credit: ${sound.credit}`}
                 >
-                  🔊 {sound.name}
+                  🔊
                 </button>
+                <b>{sound.name}</b>
                 <div className="w-8" title="Volume">
                   {volumes[idx]}
                 </div>
@@ -297,17 +303,34 @@ export default function App() {
           })}
         </div>
         <div>
-          <h2>Saved beats</h2>
-          <ul>
+          <h2 className="p-2 font-bold uppercase tracking-[0.3rem] opacity-60">
+            Saved beats
+          </h2>
+          <ul className="flex flex-col gap-2 p-2">
             {savedBeats.map((beat, idx) => (
-              <li key={idx}>
+              <li key={idx} className="flex items-center gap-2">
                 <button
+                  className="rounded bg-slate-900 px-2 py-1"
                   onClick={() => {
                     setBoard(beat.pattern);
                   }}
                 >
-                  Load {beat.name}
+                  Read
                 </button>
+                <button
+                  className="rounded bg-slate-900 px-2 py-1"
+                  onClick={() => {
+                    setSavedBeats((prev) => {
+                      // Overwrite idx with current board
+                      const next = [...prev];
+                      next[idx] = { ...beat, pattern: board, bpm, volumes };
+                      return next;
+                    });
+                  }}
+                >
+                  Write
+                </button>
+                {beat.name}
               </li>
             ))}
           </ul>
