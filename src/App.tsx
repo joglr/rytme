@@ -265,7 +265,7 @@ export default function App() {
                   className="rounded bg-slate-900 px-2 py-1"
                   onClick={() => fillWithPattern(sound.name, 1, 0)}
                 >
-                  *
+                  1
                 </button>
                 <button
                   className="rounded bg-slate-900 px-2 py-1"
