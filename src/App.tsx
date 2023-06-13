@@ -183,16 +183,16 @@ export default function App() {
     window.history.replaceState({}, "", url.toString());
   }, [deferredBpm]);
   return (
-    <div className=" h-screen w-screen bg-gradient-to-l from-emerald-500 to-emerald-700 ">
+    <div className="h-screen w-screen bg-slate-600 text-white/80">
       <div className="flex gap-2 p-2">
         <button
-          className="rounded bg-emerald-900 p-2"
+          className="rounded bg-slate-900 p-2"
           onClick={() => setIsPlaying((prev) => !prev)}
         >
           ⏯️
         </button>
         <input
-          className="p-2"
+          className="rounded bg-slate-900 p-2"
           type="number"
           value={bpm}
           min={1}
@@ -205,7 +205,7 @@ export default function App() {
           }}
         />
         <button
-          className="rounded bg-emerald-900 p-2 text-white"
+          className="rounded bg-slate-900 p-2"
           onClick={() => {
             const name = prompt(
               "Name of beat?",
@@ -219,7 +219,7 @@ export default function App() {
           Save beat
         </button>
         <button
-          className="rounded bg-emerald-900 p-2 text-white"
+          className="rounded bg-slate-900 p-2"
           onClick={() => {
             setBoard({});
           }}
@@ -237,7 +237,7 @@ export default function App() {
                     sound.audio.currentTime = 0;
                     sound.audio.play();
                   }}
-                  className="rounded bg-emerald-900 p-2"
+                  className="rounded bg-slate-900 p-2"
                   title={`Credit: ${sound.credit}`}
                 >
                   🔊 {sound.name}
@@ -271,27 +271,30 @@ export default function App() {
             gridTemplateRows: `repeat(${boardHeight}, 1fr)`,
           }}
         >
-          {boardElements.map((key, idx) => (
-            <button
-              key={key}
-              className={clsx(
-                "grid place-items-center rounded border border-slate-800 bg-emerald-500 font-bold text-black/70 transition-colors active:opacity-80",
-                {
-                  "bg-red-500":
-                    board[idx] ||
-                    (isPlaying && idx % boardWidth === currentCol),
-                }
-              )}
-              onClick={() => {
-                setBoard((prev) => ({
-                  ...prev,
-                  [idx]: !prev[idx],
-                }));
-              }}
-            >
-              {key}
-            </button>
-          ))}
+          {boardElements.map((key, idx) => {
+            const isHighlighted =
+              board[idx] || (isPlaying && idx % boardWidth === currentCol);
+            return (
+              <button
+                key={key}
+                className={clsx(
+                  "grid place-items-center rounded text-xl  font-extrabold text-black/70 shadow-md transition-colors active:opacity-80",
+                  {
+                    "bg-slate-700 text-white": isHighlighted,
+                    "bg-slate-500": !isHighlighted,
+                  }
+                )}
+                onClick={() => {
+                  setBoard((prev) => ({
+                    ...prev,
+                    [idx]: !prev[idx],
+                  }));
+                }}
+              >
+                {key}
+              </button>
+            );
+          })}
         </div>
         <div>
           <h2>Saved beats</h2>
