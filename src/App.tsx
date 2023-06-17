@@ -361,6 +361,7 @@ export default function App() {
                   className="rounded bg-slate-900 px-2 py-1"
                   onClick={() => {
                     setBoard(beat.pattern);
+                    setBpm(beat.bpm);
                   }}
                 >
                   Load
