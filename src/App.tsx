@@ -10,6 +10,7 @@ import { flushSync } from "react-dom";
 import { useLocalStorage } from "./hooks";
 
 const boardWidth = 16;
+const keysToKeepTrackOf = ["1", "2", "3", "4"] as const;
 
 type Sound = {
   name: string;
@@ -28,6 +29,14 @@ export default function App() {
       volumes: number[];
     }[]
   >("beats", []);
+  const [keysDown, setKeysDown] = useState<
+    Record<(typeof keysToKeepTrackOf)[number], boolean>
+  >({
+    "1": false,
+    "2": false,
+    "3": false,
+    "4": false,
+  });
   const [bpm, setBpm] = useState(() => 200);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -95,13 +104,32 @@ export default function App() {
   });
 
   useEffect(() => {
-    function keyUpListener(e: KeyboardEvent) {
+    function keyDownListener(e: KeyboardEvent) {
+      if (
+        keysToKeepTrackOf.includes(e.key as (typeof keysToKeepTrackOf)[number])
+      ) {
+        setKeysDown((prev) => ({ ...prev, [e.key]: true }));
+      }
       if (e.key === " ") {
         flushSync(() => {
           setCurrentCol(0);
           setIsPlaying((prev) => !prev);
         });
         return;
+      }
+    }
+    window.addEventListener("keydown", keyDownListener);
+    return () => {
+      window.removeEventListener("keydown", keyDownListener);
+    };
+  });
+
+  useEffect(() => {
+    function keyUpListener(e: KeyboardEvent) {
+      if (
+        keysToKeepTrackOf.includes(e.key as (typeof keysToKeepTrackOf)[number])
+      ) {
+        setKeysDown((prev) => ({ ...prev, [e.key]: false }));
       }
     }
     window.addEventListener("keyup", keyUpListener);
@@ -125,6 +153,23 @@ export default function App() {
         setMutes(() => {
           mutedSounds = [...mutes];
           return mutedSounds;
+        });
+      });
+
+      Object.entries(keysDown).forEach(([key, value]) => {
+        if (!value) return;
+        const idx = keysToKeepTrackOf.indexOf(
+          key as (typeof keysToKeepTrackOf)[number]
+        );
+        if (idx === -1) return;
+        setBoard((prev) => {
+          const newBoard = { ...prev };
+          const soundName = sounds[idx].name;
+          if (!newBoard[soundName]) {
+            newBoard[soundName] = [];
+          }
+          newBoard[soundName][col] = true;
+          return newBoard;
         });
       });
 
